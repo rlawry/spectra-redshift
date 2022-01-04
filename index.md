@@ -298,7 +298,7 @@
 
     var alpha = 0;
     var currentIntensity, effectiveIntensity;
-    var boost = 0;
+    var boost = 200;
     var positionTracker = new Array();
     positionTracker = [0];
     var positionBuffer = 0;
@@ -312,11 +312,14 @@
         var element = elementSel.options[elementSel.selectedIndex].value;               //Set a variable equal to the value of the selected index
         showUnshift = document.getElementById('showShift').checked;                     //Check the state of shifting or not and setting it to a variable
         spectra = elementalLines[element]['spectra'];
-        var intensity = new Array();
         var intensityDecimal;
-        var newLight;
+        var brightnessAdd;
+        var intensity = new Array();
         intensity = elementalLines[element]['intensity'];                           //create an array of the intensities for the element
-        
+        var maxIntensity = 0;
+        for(var i = 0; i<intensity.length;i++){
+            if(intensity[i]>maxIntensity){maxIntensity = intensity[i];}
+        }
 
         $("#credits").attr("href", elementalLines[element]['credits']);
         $("#credits").text(elementalLines[element]['credits']);
@@ -343,9 +346,7 @@
             }
             else{effectiveIntensity=currentIntensity;}
             
-            intensityDecimal = effectiveIntensity/1000;
-            lightness = (effectiveIntensity/1000)*100;
-            //console.log("Lightness of line "+i+" is " + lightness + " while intensity = " + effectiveIntensity + " and the portion being " + intensityDecimal);
+            intensityDecimal = effectiveIntensity/maxIntensity;          
 
             if (showUnshift == false) { emitWavelength = emitWavelength * redShift + emitWavelength; }          // If you are showing shifted spectra, this line will use the redshift factor
             var convertWav = (emitWavelength - 380) / (750 - 380) * (canvas.width - 2 * padding) + padding;     // else it is bypassed and this line is unaffected.
@@ -354,35 +355,42 @@
             hue = selectedColorIndex[0];                                                                            //The color in the previous function places each of the RGBa values into the first four indices of an array...
             saturation = selectedColorIndex[1];                                                                          //These lines take those indices and place them in simpler variables so they mean a little more.
             var baseLightness = selectedColorIndex[2];
-            //console.log("The baseLightness map is " + baseLightness + " and the intensityDecimal is " + intensityDecimal + " for converted wav of "+ convertWav);
-            if ((baseLightness - baseLightness * intensityDecimal) <= 0) {
-                newLight = 0;
+            
+            if(elementSel !="Sodium"){
+                if((baseLightness+brightnessAdd)*intensityDecimal<70){brightnessAdd = 40;}
+                else{brightnessAdd = 0;}
             }
-            else if ((baseLightness - baseLightness * intensityDecimal) > 0) {
-                newLight = baseLightness - intensityDecimal * baseLightness;
-                //console.log(newLight + " we did something with newLight for line # " +i);
-            }
+            else if(elementSel == "Sodium"){brightnessAdd = 0;}
 
             if (showSpectrum == false) {
-                if(newLight >= 50){newLight = 55;}
-                ctx.strokeStyle = 'hsl(' + hue + ',' + saturation + '%,' + newLight + '%)';
-                //console.log(newLight + " new Light for line # " + i);
+                ctx.strokeStyle = 'hsl(' + hue + ',' + saturation + '%,' + ((baseLightness+brightnessAdd)*intensityDecimal) + '%)';
             }
             else if (showSpectrum == true) {
-                ctx.strokeStyle = 'hsl(' + hue + ',' + saturation + '%,' + 0 + '%)';
+                console.log((baseLightness - (baseLightness+10)*intensityDecimal) + " baseLightness - (baseLightness+10)*intensityDecimal and i " + i)
+                if((baseLightness - (baseLightness+10)*intensityDecimal) <0){
+                    ctx.strokeStyle = 'hsl(' + hue + ',' + saturation + '%,' + 0 + '%)';
+                }
+                else{
+                    ctx.strokeStyle = 'hsl(' + hue + ',' + saturation + '%,' + (baseLightness-(baseLightness+10)*intensityDecimal) + '%)';
+                    console.log("hsl(" + hue + ", " + saturation + ", "+ (baseLightness-(baseLightness+10)*intensityDecimal) + "%");
+                    console.log("hue: " + hue);
+                    console.log("saturation: " + saturation);
+                    console.log("lightness: " + baseLightness);
+                    
+                }
             }
             let included = positionTracker.includes(roundedConvert);
-            if(included===false){
+            //if(included===false){
                 if(convertWav>0){
                     if(typeof convertWav !== "undefined"){
-                        if(isNaN(lightness)==false){
+                        if(isNaN(intensityDecimal)==false){
                             //console.log("current hue is " + hue + " for line # " + i);
                             drawLine(convertWav);
                             lineCount++;
                         }
                     }
                 }
-            }
+            //}
             plotType = 1;
             positionTracker[positionTracker.length] = Math.round(convertWav);
         }
